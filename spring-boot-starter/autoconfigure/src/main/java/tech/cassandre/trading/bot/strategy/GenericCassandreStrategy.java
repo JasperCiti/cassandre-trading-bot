@@ -1,5 +1,6 @@
 package tech.cassandre.trading.bot.strategy;
 
+import org.mapstruct.factory.Mappers;
 import tech.cassandre.trading.bot.dto.market.TickerDTO;
 import tech.cassandre.trading.bot.dto.position.PositionDTO;
 import tech.cassandre.trading.bot.dto.position.PositionStatusDTO;
@@ -7,22 +8,40 @@ import tech.cassandre.trading.bot.dto.trade.OrderDTO;
 import tech.cassandre.trading.bot.dto.trade.TradeDTO;
 import tech.cassandre.trading.bot.dto.user.AccountDTO;
 import tech.cassandre.trading.bot.dto.user.BalanceDTO;
-import tech.cassandre.trading.bot.service.PositionService;
-import tech.cassandre.trading.bot.service.TradeService;
 import tech.cassandre.trading.bot.dto.util.CurrencyAmountDTO;
 import tech.cassandre.trading.bot.dto.util.CurrencyDTO;
 import tech.cassandre.trading.bot.dto.util.CurrencyPairDTO;
+import tech.cassandre.trading.bot.repository.OrderRepository;
+import tech.cassandre.trading.bot.repository.PositionRepository;
+import tech.cassandre.trading.bot.repository.TradeRepository;
+import tech.cassandre.trading.bot.service.PositionService;
+import tech.cassandre.trading.bot.service.TradeService;
+import tech.cassandre.trading.bot.util.mapper.CassandreMapper;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Generic Cassandre strategy.
  */
 public abstract class GenericCassandreStrategy implements CassandreStrategyInterface {
+
+    /** Mapper. */
+    private final CassandreMapper mapper = Mappers.getMapper(CassandreMapper.class);
+
+    /** Order repository. */
+    private OrderRepository orderRepository;
+
+    /** Trade repository. */
+    private TradeRepository tradeRepository;
+
+    /** Position repository. */
+    private PositionRepository positionRepository;
 
     /** Trade service. */
     private TradeService tradeService;
@@ -33,20 +52,42 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
     /** The accounts owned by the user. */
     private final Map<String, AccountDTO> accounts = new LinkedHashMap<>();
 
-    /** The orders owned by the user. */
-    private final Map<String, OrderDTO> orders = new LinkedHashMap<>();
-
-    /** The trades owned by the user. */
-    private final Map<String, TradeDTO> trades = new LinkedHashMap<>();
-
-    /** The positions owned by the user. */
-    private final Map<Long, PositionDTO> positions = new LinkedHashMap<>();
-
     /** Positions previous status. */
-    private final Map<Long, PositionStatusDTO> previousPositions = new LinkedHashMap<>();
+    private final Map<Long, PositionStatusDTO> previousPositionsStatus = new LinkedHashMap<>();
 
     /** Last ticker received. */
     private final Map<CurrencyPairDTO, TickerDTO> lastTicker = new LinkedHashMap<>();
+
+    @Override
+    public final PositionRepository getPositionRepository() {
+        return positionRepository;
+    }
+
+    @Override
+    public final void setPositionRepository(final PositionRepository newPositionRepository) {
+        positionRepository = newPositionRepository;
+    }
+
+    @Override
+    public final OrderRepository getOrderRepository() {
+        return orderRepository;
+    }
+
+    @Override
+    public final TradeRepository getTradeRepository() {
+        return tradeRepository;
+    }
+
+
+    @Override
+    public final void setOrderRepository(final OrderRepository newOrderRepository) {
+        this.orderRepository = newOrderRepository;
+    }
+
+    @Override
+    public final void setTradeRepository(final TradeRepository newTradeRepository) {
+        this.tradeRepository = newTradeRepository;
+    }
 
     @Override
     public final void setTradeService(final TradeService newTradeService) {
@@ -68,16 +109,6 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
         return positionService;
     }
 
-    @Override
-    public final void restoreTrade(final TradeDTO trade) {
-        getTrades().put(trade.getId(), trade);
-    }
-
-    @Override
-    public final void restorePosition(final PositionDTO position) {
-        getPositions().put(position.getId(), position);
-    }
-
     /**
      * Getter accounts.
      *
@@ -93,7 +124,10 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
      * @return orders
      */
     public final Map<String, OrderDTO> getOrders() {
-        return orders;
+        return orderRepository.findByOrderByTimestampAsc()
+                .stream()
+                .map(mapper::mapToOrderDTO)
+                .collect(Collectors.toMap(OrderDTO::getId, o -> o));
     }
 
     /**
@@ -102,7 +136,19 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
      * @return trades
      */
     public final Map<String, TradeDTO> getTrades() {
-        return trades;
+        return tradeRepository.findByOrderByTimestampAsc()
+                .stream()
+                .map(mapper::mapToTradeDTO)
+                .collect(Collectors.toMap(TradeDTO::getId, t -> t));
+    }
+
+    /**
+     * Get trades from database.
+
+     * @return trades.
+     */
+    public final Set<TradeDTO> getTradesFromDatabase() {
+        return tradeService.getTradesFromDatabase();
     }
 
     /**
@@ -111,7 +157,10 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
      * @return positions
      */
     public final Map<Long, PositionDTO> getPositions() {
-        return positions;
+        return positionRepository.findByOrderById()
+                .stream()
+                .map(mapper::mapToPositionDTO)
+                .collect(Collectors.toMap(PositionDTO::getId, t -> t));
     }
 
     /**
@@ -119,8 +168,8 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
      *
      * @return previousPositions
      */
-    public final Map<Long, PositionStatusDTO> getPreviousPositions() {
-        return previousPositions;
+    public final Map<Long, PositionStatusDTO> getPreviousPositionsStatus() {
+        return previousPositionsStatus;
     }
 
     /**
@@ -135,6 +184,46 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
     @Override
     public final Optional<AccountDTO> getTradeAccount() {
         return getTradeAccount(new LinkedHashSet<>(getAccounts().values()));
+    }
+
+    @SuppressWarnings("checkstyle:DesignForExtension")
+    @Override
+    public void accountUpdate(final AccountDTO account) {
+        getAccounts().put(account.getId(), account);
+        onAccountUpdate(account);
+    }
+
+    @SuppressWarnings("checkstyle:DesignForExtension")
+    @Override
+    public void tickerUpdate(final TickerDTO ticker) {
+        getLastTicker().put(ticker.getCurrencyPair(), ticker);
+        onTickerUpdate(ticker);
+    }
+
+    @SuppressWarnings("checkstyle:DesignForExtension")
+    @Override
+    public void orderUpdate(final OrderDTO order) {
+        onOrderUpdate(order);
+    }
+
+    @SuppressWarnings("checkstyle:DesignForExtension")
+    @Override
+    public void tradeUpdate(final TradeDTO trade) {
+        onTradeUpdate(trade);
+    }
+
+    @SuppressWarnings("checkstyle:DesignForExtension")
+    @Override
+    public void positionUpdate(final PositionDTO position) {
+        // For every position update.
+        getPositions().put(position.getId(), position);
+        onPositionUpdate(position);
+
+        // For every position status update.
+        if (getPreviousPositionsStatus().get(position.getId()) != position.getStatus()) {
+            getPreviousPositionsStatus().put(position.getId(), position.getStatus());
+            onPositionStatusUpdate(position);
+        }
     }
 
     /**
@@ -312,6 +401,36 @@ public abstract class GenericCassandreStrategy implements CassandreStrategyInter
         // If the is no balance in this currency, we can't buy.
         return balance.filter(balanceDTO -> balanceDTO.getAvailable().subtract(amount).subtract(minimumBalanceAfter).compareTo(BigDecimal.ZERO) > 0
                 || balanceDTO.getAvailable().subtract(amount).subtract(minimumBalanceAfter).compareTo(BigDecimal.ZERO) == 0).isPresent();
+    }
+
+    @Override
+    public void onAccountUpdate(final AccountDTO account) {
+
+    }
+
+    @Override
+    public void onTickerUpdate(final TickerDTO ticker) {
+
+    }
+
+    @Override
+    public void onOrderUpdate(final OrderDTO order) {
+
+    }
+
+    @Override
+    public void onTradeUpdate(final TradeDTO trade) {
+
+    }
+
+    @Override
+    public void onPositionUpdate(final PositionDTO position) {
+
+    }
+
+    @Override
+    public void onPositionStatusUpdate(final PositionDTO position) {
+
     }
 
 }

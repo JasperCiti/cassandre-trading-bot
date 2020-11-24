@@ -1,6 +1,7 @@
 package tech.cassandre.trading.bot.integration.kucoin;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +36,11 @@ import static tech.cassandre.trading.bot.dto.user.AccountFeatureDTO.TRADING;
         "cassandre.trading.bot.exchange.rates.account=100",
         "cassandre.trading.bot.exchange.rates.ticker=101",
         "cassandre.trading.bot.exchange.rates.trade=102",
+        "spring.jpa.hibernate.ddl-auto=update",
+        "cassandre.trading.bot.database.datasource.driver-class-name=org.hsqldb.jdbc.JDBCDriver",
+        "cassandre.trading.bot.database.datasource.url=jdbc:hsqldb:mem:cassandre-database;shutdown=true",
+        "cassandre.trading.bot.database.datasource.username=sa",
+        "cassandre.trading.bot.database.datasource.password=",
         "testableStrategy.enabled=true",
         "invalidStrategy.enabled=false"
 })
@@ -45,6 +51,7 @@ public class UserServiceTest {
     private UserService userService;
 
     @Test
+    @Tag("integration")
     @DisplayName("CHeck get user, accounts and balances")
     public void checkGetUser() {
         // Expected values.

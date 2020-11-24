@@ -68,6 +68,12 @@ public interface TradeService {
     Set<OrderDTO> getOpenOrders();
 
     /**
+     * Get orders from database.
+     * @return orders from database
+     */
+    Set<OrderDTO> getOrdersFromDatabase();
+
+    /**
      * Cancel order.
      *
      * @param orderId order id
@@ -83,17 +89,10 @@ public interface TradeService {
     Set<TradeDTO> getTrades();
 
     /**
-     * Restore trade.
+     * Get trades from database.
      *
-     * @param trade trade
+     * @return trades
      */
-    void restoreTrade(TradeDTO trade);
-
-    /**
-     * Backup trade.
-     *
-     * @param trade trade
-     */
-    void backupTrade(TradeDTO trade);
+    Set<TradeDTO> getTradesFromDatabase();
 
 }

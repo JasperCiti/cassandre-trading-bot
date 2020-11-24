@@ -18,11 +18,20 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.pollinterval.FibonacciPollInterval.fibonacci;
+import static tech.cassandre.trading.bot.dto.util.CurrencyDTO.BTC;
+import static tech.cassandre.trading.bot.dto.util.CurrencyDTO.ETH;
+import static tech.cassandre.trading.bot.dto.util.CurrencyDTO.USDT;
 
 /**
  * Base for tests.
  */
 public class BaseTest {
+
+    /** cp1 for tests. */
+    protected final CurrencyPairDTO cp1 = new CurrencyPairDTO(ETH, BTC);
+
+    /** cp2 for tests. */
+    protected final CurrencyPairDTO cp2 = new CurrencyPairDTO(ETH, USDT);
 
     /** Ten seconds wait. */
     protected static final long WAITING_TIME_IN_SECONDS = 5L;
@@ -37,7 +46,7 @@ public class BaseTest {
      * Constructor.
      */
     public BaseTest() {
-        // Configure Awaitility.
+        // Default Configuration for Awaitility.
         Awaitility.setDefaultPollInterval(fibonacci(SECONDS));
         Awaitility.setDefaultTimeout(MAXIMUM_RESPONSE_TIME_IN_SECONDS, SECONDS);
     }
@@ -118,7 +127,7 @@ public class BaseTest {
      * @param day day
      * @return date
      */
-    protected static Date createDay(final int day) {
+    protected static Date createDate(final int day) {
         return Date.from(ZonedDateTime.of(2020, 1, day, 9, 0, 0, 0, ZoneId.systemDefault()).toInstant());
     }
 

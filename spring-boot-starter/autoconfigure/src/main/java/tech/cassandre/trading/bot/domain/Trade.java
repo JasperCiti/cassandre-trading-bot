@@ -3,9 +3,14 @@ package tech.cassandre.trading.bot.domain;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+
+import static tech.cassandre.trading.bot.configuration.DatabaseAutoConfiguration.PRECISION;
+import static tech.cassandre.trading.bot.configuration.DatabaseAutoConfiguration.SCALE;
 
 /**
  * Trade (used to save data between restarts).
@@ -13,12 +18,6 @@ import java.time.ZonedDateTime;
 @Entity
 @Table(name = "TRADES")
 public class Trade {
-
-    /** Precision. */
-    private static final int PRECISION = 16;
-
-    /** Scale. */
-    private static final int SCALE = 8;
 
     /** An identifier set by the exchange that uniquely identifies the trade. */
     @Id
@@ -46,6 +45,7 @@ public class Trade {
     private BigDecimal price;
 
     /** The timestamp on the order according to the exchange's server, null if not provided. */
+    // TODO Change field name and java code ?
     @Column(name = "ORDER_TIMESTAMP")
     private ZonedDateTime timestamp;
 
@@ -56,6 +56,11 @@ public class Trade {
     /** The fee that was charged by the exchange for this trade. */
     @Column(name = "FEE_CURRENCY")
     private String feeCurrency;
+
+    /** Position using this trade. */
+    @ManyToOne
+    @JoinColumn(name = "POSITION_ID")
+    private Position position;
 
     /**
      * Getter id.
@@ -217,6 +222,39 @@ public class Trade {
      */
     public void setFeeCurrency(final String newFeeCurrency) {
         feeCurrency = newFeeCurrency;
+    }
+
+    /**
+     * Getter position.
+     *
+     * @return position
+     */
+    public Position getPosition() {
+        return position;
+    }
+
+    /**
+     * Setter position.
+     *
+     * @param newPosition the position to set
+     */
+    public void setPosition(final Position newPosition) {
+        position = newPosition;
+    }
+
+    @Override
+    public final String toString() {
+        return "Trade{"
+                + " id='" + id + '\''
+                + ", orderId='" + orderId + '\''
+                + ", type='" + type + '\''
+                + ", originalAmount=" + originalAmount
+                + ", currencyPair='" + currencyPair + '\''
+                + ", price=" + price
+                + ", timestamp=" + timestamp
+                + ", feeAmount=" + feeAmount
+                + ", feeCurrency='" + feeCurrency + '\''
+                + '}';
     }
 
 }

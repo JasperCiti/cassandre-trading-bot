@@ -2,7 +2,6 @@ package tech.cassandre.trading.bot.service.dry;
 
 import tech.cassandre.trading.bot.batch.OrderFlux;
 import tech.cassandre.trading.bot.batch.TradeFlux;
-import tech.cassandre.trading.bot.domain.Trade;
 import tech.cassandre.trading.bot.dto.market.TickerDTO;
 import tech.cassandre.trading.bot.dto.trade.OrderCreationResultDTO;
 import tech.cassandre.trading.bot.dto.trade.OrderDTO;
@@ -11,10 +10,11 @@ import tech.cassandre.trading.bot.dto.trade.TradeDTO;
 import tech.cassandre.trading.bot.dto.user.AccountDTO;
 import tech.cassandre.trading.bot.dto.user.BalanceDTO;
 import tech.cassandre.trading.bot.dto.user.UserDTO;
+import tech.cassandre.trading.bot.dto.util.CurrencyPairDTO;
+import tech.cassandre.trading.bot.repository.OrderRepository;
 import tech.cassandre.trading.bot.repository.TradeRepository;
 import tech.cassandre.trading.bot.service.TradeService;
 import tech.cassandre.trading.bot.util.base.BaseService;
-import tech.cassandre.trading.bot.dto.util.CurrencyPairDTO;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static tech.cassandre.trading.bot.dto.trade.OrderStatusDTO.FILLED;
 import static tech.cassandre.trading.bot.dto.trade.OrderTypeDTO.BID;
@@ -59,25 +60,28 @@ public class TradeServiceDryModeImplementation extends BaseService implements Tr
     /** Orders. */
     private final Map<String, OrderDTO> orders = new LinkedHashMap<>();
 
-    /** The trades owned by the user. */
-    private final Map<String, TradeDTO> trades = new LinkedHashMap<>();
-
     /** User service - dry mode. */
     private final UserServiceDryModeImplementation userService;
 
     /** Trade repository. */
     private final TradeRepository tradeRepository;
 
+    /** Order repository. */
+    private final OrderRepository orderRepository;
+
     /**
      * Constructor.
      *
-     * @param newUserService user service
+     * @param newUserService     user service
      * @param newTradeRepository trade repository
+     * @param newOrderRepository order repository
      */
     public TradeServiceDryModeImplementation(final UserServiceDryModeImplementation newUserService,
-                                             final TradeRepository newTradeRepository) {
+                                             final TradeRepository newTradeRepository,
+                                             final OrderRepository newOrderRepository) {
         this.userService = newUserService;
         this.tradeRepository = newTradeRepository;
+        this.orderRepository = newOrderRepository;
     }
 
     /**
@@ -189,7 +193,6 @@ public class TradeServiceDryModeImplementation extends BaseService implements Tr
                 orderFlux.emitValue(order);
                 orders.put(orderId, order);
                 tradeFlux.emitValue(trade);
-                trades.put(tradeId, trade);
             });
 
             // We update the balances of the account because of the trade.
@@ -239,13 +242,32 @@ public class TradeServiceDryModeImplementation extends BaseService implements Tr
     }
 
     @Override
+    public final Set<OrderDTO> getOrdersFromDatabase() {
+        return orderRepository.findByOrderByTimestampAsc()
+                .stream()
+                .map(order -> getMapper().mapToOrderDTO(order))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @Override
     public final boolean cancelOrder(final String orderId) {
         return orders.remove(orderId) != null;
     }
 
     @Override
     public final Set<TradeDTO> getTrades() {
-        return new LinkedHashSet<>(trades.values());
+        return tradeRepository.findByOrderByTimestampAsc()
+                .stream()
+                .map(trade -> getMapper().mapToTradeDTO(trade))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @Override
+    public final Set<TradeDTO> getTradesFromDatabase() {
+        return tradeRepository.findByOrderByTimestampAsc()
+                .stream()
+                .map(trade -> getMapper().mapToTradeDTO(trade))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**
@@ -273,26 +295,6 @@ public class TradeServiceDryModeImplementation extends BaseService implements Tr
      */
     public void tickerUpdate(final TickerDTO ticker) {
         lastTickers.put(ticker.getCurrencyPair(), ticker);
-    }
-
-    @Override
-    public final void restoreTrade(final TradeDTO trade) {
-        trades.put(trade.getId(), trade);
-    }
-
-    @Override
-    public final void backupTrade(final TradeDTO trade) {
-        Trade t = new Trade();
-        t.setId(trade.getId());
-        t.setOrderId(trade.getOrderId());
-        t.setType(trade.getType().toString());
-        t.setOriginalAmount(trade.getOriginalAmount());
-        t.setCurrencyPair(trade.getCurrencyPair().toString());
-        t.setPrice(trade.getPrice());
-        t.setTimestamp(trade.getTimestamp());
-        t.setFeeAmount(trade.getFee().getValue());
-        t.setFeeCurrency(trade.getFee().getCurrency().toString());
-        tradeRepository.save(t);
     }
 
 }

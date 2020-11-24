@@ -15,17 +15,16 @@ import tech.cassandre.trading.bot.batch.OrderFlux;
 import tech.cassandre.trading.bot.batch.PositionFlux;
 import tech.cassandre.trading.bot.batch.TickerFlux;
 import tech.cassandre.trading.bot.batch.TradeFlux;
+import tech.cassandre.trading.bot.repository.OrderRepository;
 import tech.cassandre.trading.bot.repository.PositionRepository;
 import tech.cassandre.trading.bot.repository.TradeRepository;
 import tech.cassandre.trading.bot.service.ExchangeService;
 import tech.cassandre.trading.bot.service.MarketService;
-import tech.cassandre.trading.bot.service.PositionService;
 import tech.cassandre.trading.bot.service.TradeService;
 import tech.cassandre.trading.bot.service.UserService;
 import tech.cassandre.trading.bot.service.dry.ExchangeServiceDryModeImplementation;
 import tech.cassandre.trading.bot.service.dry.TradeServiceDryModeImplementation;
 import tech.cassandre.trading.bot.service.dry.UserServiceDryModeImplementation;
-import tech.cassandre.trading.bot.service.intern.PositionServiceImplementation;
 import tech.cassandre.trading.bot.service.xchange.ExchangeServiceXChangeImplementation;
 import tech.cassandre.trading.bot.service.xchange.MarketServiceXChangeImplementation;
 import tech.cassandre.trading.bot.service.xchange.TradeServiceXChangeImplementation;
@@ -42,9 +41,7 @@ import java.util.StringJoiner;
  * ExchangeConfiguration configures the exchange connection.
  */
 @Configuration
-@EnableConfigurationProperties({ExchangeParameters.class,
-        ExchangeParameters.Modes.class,
-        ExchangeParameters.Rates.class})
+@EnableConfigurationProperties(ExchangeParameters.class)
 public class ExchangeAutoConfiguration extends BaseConfiguration {
 
     /** XChange user sandbox parameter. */
@@ -74,9 +71,6 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
     /** Trade service. */
     private TradeService tradeService;
 
-    /** Position service. */
-    private PositionService positionService;
-
     /** Account flux. */
     private AccountFlux accountFlux;
 
@@ -92,6 +86,9 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
     /** Position flux. */
     private PositionFlux positionFlux;
 
+    /** Order repository. */
+    private final OrderRepository orderRepository;
+
     /** Trade repository. */
     private final TradeRepository tradeRepository;
 
@@ -103,15 +100,18 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
      *
      * @param newApplicationContext application context
      * @param newExchangeParameters exchange parameters
+     * @param newOrderRepository    order repository
      * @param newTradeRepository    trade repository
      * @param newPositionRepository position repository
      */
     public ExchangeAutoConfiguration(final ApplicationContext newApplicationContext,
                                      final ExchangeParameters newExchangeParameters,
+                                     final OrderRepository newOrderRepository,
                                      final TradeRepository newTradeRepository,
                                      final PositionRepository newPositionRepository) {
         this.applicationContext = newApplicationContext;
         this.exchangeParameters = newExchangeParameters;
+        this.orderRepository = newOrderRepository;
         this.tradeRepository = newTradeRepository;
         this.positionRepository = newPositionRepository;
     }
@@ -163,8 +163,7 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
                 this.exchangeService = new ExchangeServiceXChangeImplementation(xChangeExchange);
                 this.userService = new UserServiceXChangeImplementation(accountRate, xChangeAccountService);
                 this.marketService = new MarketServiceXChangeImplementation(tickerRate, xChangeMarketDataService);
-                this.tradeService = new TradeServiceXChangeImplementation(tradeRate, xChangeTradeService, tradeRepository);
-                this.positionService = new PositionServiceImplementation(tradeService, positionRepository);
+                this.tradeService = new TradeServiceXChangeImplementation(tradeRate, xChangeTradeService, tradeRepository, orderRepository);
             } else {
                 // Dry mode.
                 getLogger().info("Dry mode is on");
@@ -172,17 +171,16 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
                 userServiceDryMode = new UserServiceDryModeImplementation();
                 this.userService = userServiceDryMode;
                 this.marketService = new MarketServiceXChangeImplementation(tickerRate, xChangeMarketDataService);
-                tradeServiceDryMode = new TradeServiceDryModeImplementation(userServiceDryMode, tradeRepository);
+                tradeServiceDryMode = new TradeServiceDryModeImplementation(userServiceDryMode, tradeRepository, orderRepository);
                 this.tradeService = tradeServiceDryMode;
-                this.positionService = new PositionServiceImplementation(tradeService, positionRepository);
             }
 
             // Creates Cassandre flux.
             accountFlux = new AccountFlux(userService);
             tickerFlux = new TickerFlux(marketService);
-            orderFlux = new OrderFlux(tradeService);
-            tradeFlux = new TradeFlux(tradeService);
-            positionFlux = new PositionFlux(positionService);
+            orderFlux = new OrderFlux(tradeService, orderRepository);
+            tradeFlux = new TradeFlux(tradeService, tradeRepository);
+            positionFlux = new PositionFlux(positionRepository);
 
             // Force login to check credentials.
             xChangeAccountService.getAccountInfo();
@@ -350,16 +348,6 @@ public class ExchangeAutoConfiguration extends BaseConfiguration {
     @Bean
     public TradeFlux getTradeFlux() {
         return tradeFlux;
-    }
-
-    /**
-     * Getter for positionService.
-     *
-     * @return positionService
-     */
-    @Bean
-    public PositionService getPositionService() {
-        return positionService;
     }
 
     /**

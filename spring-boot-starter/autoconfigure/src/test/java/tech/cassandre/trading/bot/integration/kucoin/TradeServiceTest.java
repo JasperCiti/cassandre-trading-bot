@@ -2,6 +2,7 @@ package tech.cassandre.trading.bot.integration.kucoin;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,11 @@ import static tech.cassandre.trading.bot.dto.util.CurrencyDTO.ETH;
         "cassandre.trading.bot.exchange.rates.account=100",
         "cassandre.trading.bot.exchange.rates.ticker=101",
         "cassandre.trading.bot.exchange.rates.trade=102",
+        "spring.jpa.hibernate.ddl-auto=update",
+        "cassandre.trading.bot.database.datasource.driver-class-name=org.hsqldb.jdbc.JDBCDriver",
+        "cassandre.trading.bot.database.datasource.url=jdbc:hsqldb:mem:cassandre-database;shutdown=true",
+        "cassandre.trading.bot.database.datasource.username=sa",
+        "cassandre.trading.bot.database.datasource.password=",
         "testableStrategy.enabled=true",
         "invalidStrategy.enabled=false"
 })
@@ -56,6 +62,7 @@ public class TradeServiceTest extends BaseTest {
     }
 
     @Test
+    @Tag("integration")
     @DisplayName("Check creates a buy / sell market order")
     public void checkCreateBuySellMarketOrder() {
         final CurrencyPairDTO cp = new CurrencyPairDTO(ETH, BTC);
@@ -83,6 +90,7 @@ public class TradeServiceTest extends BaseTest {
     }
 
     @Test
+    @Tag("integration")
     @DisplayName("Check creates a buy limit order")
     public void checkCreateBuyLimitOrder() {
         final CurrencyPairDTO cp = new CurrencyPairDTO(ETH, BTC);
@@ -123,6 +131,7 @@ public class TradeServiceTest extends BaseTest {
     }
 
     @Test
+    @Tag("integration")
     @DisplayName("Check cancel an order")
     public void checkCancelOrder() {
         final CurrencyPairDTO cp = new CurrencyPairDTO(ETH, BTC);
@@ -145,6 +154,7 @@ public class TradeServiceTest extends BaseTest {
     }
 
     @Test
+    @Tag("integration")
     @DisplayName("Check get trades")
     public void checkGetTrades() {
         final CurrencyPairDTO cp = new CurrencyPairDTO(ETH, BTC);

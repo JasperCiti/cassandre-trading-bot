@@ -5,8 +5,15 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.math.BigDecimal;
+import java.util.Set;
+
+import static javax.persistence.FetchType.EAGER;
+import static tech.cassandre.trading.bot.configuration.DatabaseAutoConfiguration.PRECISION;
+import static tech.cassandre.trading.bot.configuration.DatabaseAutoConfiguration.SCALE;
 
 /**
  * Position (used to save data between restarts).
@@ -14,12 +21,6 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "POSITIONS")
 public class Position {
-
-    /** Precision. */
-    private static final int PRECISION = 16;
-
-    /** Scale. */
-    private static final int SCALE = 8;
 
     /** An identifier that uniquely identifies the position. */
     @Id
@@ -30,6 +31,14 @@ public class Position {
     /** Position . */
     @Column(name = "STATUS")
     private String status;
+
+    /** The currency-pair. */
+    @Column(name = "CURRENCY_PAIR")
+    private String currencyPair;
+
+    /** Amount to be ordered / amount that was ordered. */
+    @Column(name = "AMOUNT", precision = PRECISION, scale = SCALE)
+    private BigDecimal amount;
 
     /** Position rules - stop gain percentage. */
     @Column(name = "RULES_STOP_GAIN_PERCENTAGE")
@@ -47,13 +56,22 @@ public class Position {
     @Column(name = "CLOSE_ORDER_ID")
     private String closeOrderId;
 
-    /** The fee that was charged by the exchange for this trade. */
+    /** All trades related to positions. */
+    @OneToMany(fetch = EAGER)
+    @JoinColumn(name = "POSITION_ID")
+    private Set<Trade> trades;
+
+    /** Lowest price. */
     @Column(name = "LOWEST_PRICE", precision = PRECISION, scale = SCALE)
     private BigDecimal lowestPrice;
 
-    /** The fee that was charged by the exchange for this trade. */
+    /** Highest price. */
     @Column(name = "HIGHEST_PRICE", precision = PRECISION, scale = SCALE)
     private BigDecimal highestPrice;
+
+    /** Latest price. */
+    @Column(name = "LATEST_PRICE", precision = PRECISION, scale = SCALE)
+    private BigDecimal latestPrice;
 
     /**
      * Getter id.
@@ -89,6 +107,42 @@ public class Position {
      */
     public void setStatus(final String newStatus) {
         status = newStatus;
+    }
+
+    /**
+     * Getter currencyPair.
+     *
+     * @return currencyPair
+     */
+    public String getCurrencyPair() {
+        return currencyPair;
+    }
+
+    /**
+     * Setter currencyPair.
+     *
+     * @param newCurrencyPair the currencyPair to set
+     */
+    public void setCurrencyPair(final String newCurrencyPair) {
+        currencyPair = newCurrencyPair;
+    }
+
+    /**
+     * Getter amount.
+     *
+     * @return amount
+     */
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    /**
+     * Setter amount.
+     *
+     * @param newAmount the amount to set
+     */
+    public void setAmount(final BigDecimal newAmount) {
+        amount = newAmount;
     }
 
     /**
@@ -164,6 +218,24 @@ public class Position {
     }
 
     /**
+     * Getter trades.
+     *
+     * @return trades
+     */
+    public Set<Trade> getTrades() {
+        return trades;
+    }
+
+    /**
+     * Setter trades.
+     *
+     * @param newTrades the trades to set
+     */
+    public void setTrades(final Set<Trade> newTrades) {
+        trades = newTrades;
+    }
+
+    /**
      * Getter lowestPrice.
      *
      * @return lowestPrice
@@ -197,6 +269,24 @@ public class Position {
      */
     public void setHighestPrice(final BigDecimal newHighestPrice) {
         highestPrice = newHighestPrice;
+    }
+
+    /**
+     * Getter latestPrice.
+     *
+     * @return latestPrice
+     */
+    public BigDecimal getLatestPrice() {
+        return latestPrice;
+    }
+
+    /**
+     * Setter latestPrice.
+     *
+     * @param newLatestPrice the latestPrice to set
+     */
+    public void setLatestPrice(final BigDecimal newLatestPrice) {
+        latestPrice = newLatestPrice;
     }
 
 }

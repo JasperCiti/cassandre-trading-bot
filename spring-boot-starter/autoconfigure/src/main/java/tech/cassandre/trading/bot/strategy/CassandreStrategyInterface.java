@@ -5,6 +5,9 @@ import tech.cassandre.trading.bot.dto.position.PositionDTO;
 import tech.cassandre.trading.bot.dto.trade.OrderDTO;
 import tech.cassandre.trading.bot.dto.trade.TradeDTO;
 import tech.cassandre.trading.bot.dto.user.AccountDTO;
+import tech.cassandre.trading.bot.repository.OrderRepository;
+import tech.cassandre.trading.bot.repository.PositionRepository;
+import tech.cassandre.trading.bot.repository.TradeRepository;
 import tech.cassandre.trading.bot.service.PositionService;
 import tech.cassandre.trading.bot.service.TradeService;
 import tech.cassandre.trading.bot.dto.util.CurrencyPairDTO;
@@ -16,7 +19,50 @@ import java.util.Set;
  * Cassandre strategy interface.
  * This allows the framework to communicate with the strategy.
  */
+@SuppressWarnings("unused")
 public interface CassandreStrategyInterface {
+
+    /**
+     * Getter orderRepository.
+     *
+     * @return orderRepository
+     */
+    OrderRepository getOrderRepository();
+
+    /**
+     * Setter order repository.
+     *
+     * @param newOrderRepository order repository
+     */
+    void setOrderRepository(OrderRepository newOrderRepository);
+
+    /**
+     * Getter tradeRepository.
+     *
+     * @return tradeRepository
+     */
+    TradeRepository getTradeRepository();
+
+    /**
+     * Setter trade repository.
+     *
+     * @param newTradeRepository trade repository.
+     */
+    void setTradeRepository(TradeRepository newTradeRepository);
+
+    /**
+     * Getter positionRepository.
+     *
+     * @return positionRepository
+     */
+     PositionRepository getPositionRepository();
+
+    /**
+     * Setter positionRepository.
+     *
+     * @param newPositionRepository the positionRepository to set
+     */
+    void setPositionRepository(PositionRepository newPositionRepository);
 
     /**
      * Setter for tradeService.
@@ -46,20 +92,6 @@ public interface CassandreStrategyInterface {
      * @return positionService
      */
     PositionService getPositionService();
-
-    /**
-     * Restore trade from database.
-     *
-     * @param trade trade to restore
-     */
-    void restoreTrade(TradeDTO trade);
-
-    /**
-     * Restore position from database.
-     *
-     * @param position position to restore
-     */
-    void restorePosition(PositionDTO position);
 
     /**
      * Method called by streams at every account update.
